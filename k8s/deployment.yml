@@ -4,8 +4,7 @@ meta:
   deployment_name: (( concat meta.environment_name "-" meta.app_name "-deployment" ))
   deployment_tags:
     app: (( concat meta.environment_name "-" meta.app_name ))
-
-  replicas: (( param "please provide meta.replicas" ))
+  image_tag: (( param "Please provide meta.image_tag" ))
 
 apiVersion: apps/v1
 kind: Deployment
@@ -14,13 +13,13 @@ metadata:
 spec:
   selector:
     matchLabels: (( grab meta.deployment_tags ))
-  replicas: (( grab meta.replicas ))
+  replicas: 2
   template:
     metadata:
       labels: (( grab meta.deployment_tags ))
     spec:
       containers:
       - name: nginx
-        image: nginx:1.14.2
+        image: (( concat "nginx:" meta.image_tag ))
         ports:
         - containerPort: 80

@@ -62,3 +62,37 @@ cepler 0.4.1
 $ spruce --version
 spruce - Version 1.27.0
 ```
+
+## Test deploy
+
+Before introducing cepler lets have a look at what we are deploying.
+
+We have a kubernetes config file `kind: Deployment` that represents the our 'system'
+[k8s/deployment.yml](./k8s/deployment.yml)
+```
+meta:
+  environment_name: (( param "Please provide meta.environment_name" ))
+  app_name: nginx
+  deployment_name: (( concat meta.environment_name "-" meta.app_name "-deployment" ))
+  deployment_tags:
+    app: (( concat meta.environment_name "-" meta.app_name ))
+  image_tag: (( param "Please provide meta.image_tag" ))
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: (( grab meta.deployment_name ))
+spec:
+  selector:
+    matchLabels: (( grab meta.deployment_tags ))
+  replicas: 2
+  template:
+    metadata:
+      labels: (( grab meta.deployment_tags ))
+    spec:
+      containers:
+      - name: nginx
+        image: (( concat "nginx:" meta.image_tag ))
+        ports:
+        - containerPort: 80
+```
