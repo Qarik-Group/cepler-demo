@@ -19,7 +19,7 @@ spec:
       labels: (( grab meta.deployment_tags ))
     spec:
       containers:
-      - name: nginx
+      - name: (( grab meta.app_name ))
         image: (( concat "nginx:" meta.image_tag ))
         ports:
         - containerPort: 80

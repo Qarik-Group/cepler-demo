@@ -67,16 +67,30 @@ spruce - Version 1.27.0
 
 Before introducing cepler lets have a look at what we are deploying.
 
-We have a kubernetes config file `kind: Deployment` that represents the our 'system'
-[k8s/deployment.yml](./k8s/deployment.yml)
+The following files make up the configuration of our system across all environments:
 ```
+% tree k8s
+k8s
+├── deployment.yml
+└── environments
+    ├── shared.yml
+    ├── staging.yml
+    └── testflight.yml
+
+1 directory, 4 files
+```
+
+The [k8s/deployment.yml](./k8s/deployment.yml) file represents the 'system' we are deploying:
+```
+$ cat k8s/deployment.yml
 meta:
   environment_name: (( param "Please provide meta.environment_name" ))
+  image_tag: (( param "Please provide meta.image_tag" ))
+
   app_name: nginx
   deployment_name: (( concat meta.environment_name "-" meta.app_name "-deployment" ))
   deployment_tags:
     app: (( concat meta.environment_name "-" meta.app_name ))
-  image_tag: (( param "Please provide meta.image_tag" ))
 
 apiVersion: apps/v1
 kind: Deployment
@@ -91,8 +105,36 @@ spec:
       labels: (( grab meta.deployment_tags ))
     spec:
       containers:
-      - name: nginx
+      - name: (( grab meta.app_name ))
         image: (( concat "nginx:" meta.image_tag ))
         ports:
         - containerPort: 80
+```
+At the top of the file under the `meta` tag we have deduplicated some settings and also specified some keys that require overriding:
+```
+$ spruce merge k8s/deployment.yml
+2 error(s) detected:
+ - $.meta.environment_name: Please provide meta.environment_name
+ - $.meta.image_tag: Please provide meta.image_tag
+```
+The `meta.environment_name` override will be specified via an environment specific input file:
+```
+$ cat k8s/environments/testflight.yml
+meta:
+  environment_name: testflight
+```
+The `meta.image_tag` setting represents the version of our system that we will want to propagate from environment to environment.
+```
+$ cat k8s/environments/shared.yml
+meta:
+  image_tag: "1.18.0"
+```
+
+To deploy the `testflight` environment we could use the following command:
+```
+$ spruce merge --prune meta k8s/*.yml k8s/environments/shared.yml k8s/environments/testflight.yml | kubectl apply  -f -
+deployment.apps/testflight-nginx-deployment created
+$ kubectl get deployments
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+testflight-nginx-deployment   2/2     2            2           4s
 ```
