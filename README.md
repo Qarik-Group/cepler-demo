@@ -73,9 +73,9 @@ The following files make up the configuration of our system across all environme
 k8s
 ├── deployment.yml
 └── environments
+    ├── production.yml
     ├── shared.yml
-    ├── staging.yml
-    └── testflight.yml
+    └── staging.yml
 
 1 directory, 4 files
 ```
@@ -119,9 +119,9 @@ $ spruce merge k8s/deployment.yml
 ```
 The `meta.environment_name` override will be specified via an environment specific input file:
 ```
-$ cat k8s/environments/testflight.yml
+$ cat k8s/environments/staging.yml
 meta:
-  environment_name: testflight
+  environment_name: staging
 ```
 The `meta.image_tag` setting represents the version of our system that we will want to propagate from environment to environment.
 ```
@@ -130,11 +130,43 @@ meta:
   image_tag: "1.18.0"
 ```
 
-To deploy the `testflight` environment we could use the following command:
+To deploy the `staging` environment we could use the following command:
 ```
-$ spruce merge --prune meta k8s/*.yml k8s/environments/shared.yml k8s/environments/testflight.yml | kubectl apply  -f -
-deployment.apps/testflight-nginx-deployment created
+$ spruce merge --prune meta k8s/*.yml k8s/environments/shared.yml k8s/environments/staging.yml | kubectl apply  -f -
+deployment.apps/staging-nginx-deployment created
 $ kubectl get deployments
 NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
-testflight-nginx-deployment   2/2     2            2           4s
+staging-nginx-deployment   2/2     2            2           4s
 ```
+
+## Introducing cepler
+
+To let cepler manage the state of the files that are specific to an environment we need to add a `cepler.yml`:
+```
+$ cat cepler.yml
+environments:
+  staging:
+    latest:
+    - k8s/deployment.yml
+    - k8s/environments/shared.yml
+    - k8s/environments/staging.yml
+  production:
+    latest:
+    - k8s/environments/production.yml
+    passed: staging
+    propagated:
+    - k8s/*.yml
+```
+
+As we can see the `cepler.yml` file specifies which files make up an environment and which of those should be vetted in a previous environment.
+The `check` command gives us feedback on wether or not files have changed in a way that requires a new deploy:
+```
+$ cepler check -e staging
+File k8s/deployment.yml was added
+File k8s/environments/shared.yml was added
+File k8s/environments/staging.yml was added
+Found new state to deploy - trigger commit f5b1ba0
+$ cepler check -e production
+Error: Previous environment 'staging' not deployed yet
+```
+At this point `staging` is ready to deploy but `production` shouldn't be deployed yet since the `propagated` files haven't been vetted yet.

@@ -1,0 +1,12 @@
+environments:
+  staging:
+    latest:
+    - k8s/deployment.yml
+    - k8s/environments/shared.yml
+    - k8s/environments/testflight.yml
+  production:
+    latest:
+    - k8s/environments/staging.yml
+    passed: staging
+    propagated:
+    - k8s/*.yml
