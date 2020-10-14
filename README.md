@@ -43,11 +43,11 @@ $ brew install spruce
 ```
 Cepler can be downloaded as a [pre-built binary](https://github.com/bodymindarts/cepler/releases):
 ```
-$ wget https://github.com/bodymindarts/cepler/releases/download/v0.4.1/cepler-x86_64-apple-darwin-0.4.1.tar.gz
-$ tar -xvzf ./cepler-x86_64-apple-darwin-0.4.1.tar.gz
-x cepler-x86_64-apple-darwin-0.4.1/
-x cepler-x86_64-apple-darwin-0.4.1/cepler
-$ mv cepler-x86_64-apple-darwin-0.4.1/cepler <somewhere-on-your-PATH>
+$ wget https://github.com/bodymindarts/cepler/releases/download/v0.4.2/cepler-x86_64-apple-darwin-0.4.2.tar.gz
+$ tar -xvzf ./cepler-x86_64-apple-darwin-0.4.2.tar.gz
+x cepler-x86_64-apple-darwin-0.4.2/
+x cepler-x86_64-apple-darwin-0.4.2/cepler
+$ mv cepler-x86_64-apple-darwin-0.4.2/cepler <somewhere-on-your-PATH>
 ```
 
 Or if you have a rust toolchain installed via:
@@ -58,7 +58,7 @@ $ cargo install cepler
 Check that everything is installed via:
 ```
 $ cepler --version
-cepler 0.4.1
+cepler 0.4.2
 $ spruce --version
 spruce - Version 1.27.0
 ```
@@ -147,7 +147,7 @@ $ cat cepler.yml
 environments:
   staging:
     latest:
-    - k8s/deployment.yml
+    - k8s/*.yml
     - k8s/environments/shared.yml
     - k8s/environments/staging.yml
   production:
@@ -159,6 +159,7 @@ environments:
 ```
 
 As we can see the `cepler.yml` file specifies which files make up an environment and which of those should be vetted in a previous environment.
+
 The `check` command gives us feedback on wether or not files have changed in a way that requires a new deploy:
 ```
 $ cepler check -e staging
@@ -170,3 +171,16 @@ $ cepler check -e production
 Error: Previous environment 'staging' not deployed yet
 ```
 At this point `staging` is ready to deploy but `production` shouldn't be deployed yet since the `propagated` files haven't been vetted yet.
+
+## Deploying an environment
+
+To prepare for deploying an environment. We use the `prepare` command:
+```
+$ cepler prepare -e staging
+```
+
+In this case the command will be a no-op because for staging all files that are relevant should be checked out to their `latest` commited state (see `cepler.yml` above).
+To be sure that no other files accidentally taint the configuration of the environment we are about to deploy we can add the `--force-clean` flag rendering only the files that pass the specified globs.
+```
+$ cepler prepare -e staging --force-clean
+```

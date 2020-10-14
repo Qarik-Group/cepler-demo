@@ -1,9 +1,9 @@
 environments:
   staging:
     latest:
-    - k8s/deployment.yml
+    - k8s/*.yml
     - k8s/environments/shared.yml
-    - k8s/environments/testflight.yml
+    - k8s/environments/staging.yml
   production:
     latest:
     - k8s/environments/staging.yml
