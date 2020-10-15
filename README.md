@@ -43,11 +43,11 @@ $ brew install spruce
 ```
 Cepler can be downloaded as a [pre-built binary](https://github.com/bodymindarts/cepler/releases):
 ```
-$ wget https://github.com/bodymindarts/cepler/releases/download/v0.4.2/cepler-x86_64-apple-darwin-0.4.2.tar.gz
-$ tar -xvzf ./cepler-x86_64-apple-darwin-0.4.2.tar.gz
-x cepler-x86_64-apple-darwin-0.4.2/
-x cepler-x86_64-apple-darwin-0.4.2/cepler
-$ mv cepler-x86_64-apple-darwin-0.4.2/cepler <somewhere-on-your-PATH>
+$ wget https://github.com/bodymindarts/cepler/releases/download/v0.4.5/cepler-x86_64-apple-darwin-0.4.5.tar.gz
+$ tar -xvzf ./cepler-x86_64-apple-darwin-0.4.5.tar.gz
+x cepler-x86_64-apple-darwin-0.4.5/
+x cepler-x86_64-apple-darwin-0.4.5/cepler
+$ mv cepler-x86_64-apple-darwin-0.4.5/cepler <somewhere-on-your-PATH>
 ```
 
 Or if you have a rust toolchain installed via:
@@ -58,7 +58,7 @@ $ cargo install cepler
 Check that everything is installed via:
 ```
 $ cepler --version
-cepler 0.4.2
+cepler 0.4.5
 $ spruce --version
 spruce - Version 1.27.0
 ```
@@ -244,5 +244,147 @@ $ cat <<EOF > k8s/environments/shared.yml
 meta:
   image_tag: "1.19.0"
 EOF
-$ git add k8s/environment/shared.yml && git commit -m 'Bump app version'
+$ git add k8s/environments/shared.yml && git commit -m 'Bump app version'
+```
+
+At this point the state of `k8s/environments/shared.yml` is different from what was recorded as the last deployment to `staging`:
+```
+$ grep 'environments/shared.yml' -A 1 .cepler/staging.state
+   "{latest}/k8s/environments/shared.yml":
+     file_hash: 23451f22e83b6e8da62c2198ac43142d08f1b8f6
+$ git hash-object k8s/environments/shared.yml
+dfbaa85e62ce8edc7fc90c9dab106d2e2e4945ec
+```
+
+The latest state of the file hasn't been vetted yet (via a deploy to `staging`) so when we `prepare` the production deploy it will check out the last state to pass staging.
+```
+$ cepler prepare -e production --force-clean
+WARNING removing all non-cepler specified files
+$ tree
+.
+├── cepler.yml
+└── k8s
+    ├── deployment.yml
+    └── environments
+        ├── production.yml
+        └── shared.yml
+$ git hash-object k8s/environments/shared.yml
+23451f22e83b6e8da62c2198ac43142d08f1b8f6
+```
+
+Now that we have prepared the workspace with the files for production we can go ahead and deploy to production:
+```
+$ spruce merge --prune meta k8s/**/*.yml | kubectl apply  -f -
+% kubectl get deployments
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+production-nginx-deployment   2/2     2            2           78s
+staging-nginx-deployment      2/2     2            2           19s
+```
+After deploying we need to record the state for production:
+```
+$ cepler record -e production
+Recording current state
+Adding commit to repository to persist state
+$ cat .cepler/production.state
+---
+current:
+  head_commit: 09cd76205cc1efed1a975a711f8331ba1ee9f256
+  propagated_head: 12d50cd01cf8631fb73a5ddcc52316ccae1b4988
+  files:
+    "{latest}/k8s/environments/production.yml":
+      file_hash: 8d7bae8892cb8e02d318b0829198a2b6d8efdd4e
+      from_commit: d2f769d275a2e5808d6f2be6c20d4b6cd1ce3fbe
+      message: Move testflight -> production
+    "{staging}/k8s/deployment.yml":
+      file_hash: d78a37bbd8971a40c49841fe958d6ddb59444c36
+      from_commit: f5b1ba0a92be43c038120c6fb2447df98c4df79a
+      message: Readme
+    "{staging}/k8s/environments/shared.yml":
+      file_hash: 23451f22e83b6e8da62c2198ac43142d08f1b8f6
+      from_commit: c485204c31b86d81b14ea829bdd2a5f56ac24dd8
+      message: Use image tag as shared input
+propagated_from: staging%
+```
+
+Finally after checking out the head state again lets see what check returns:
+```
+$ git checkout .
+$ cepler check -e production
+Nothing new to deploy
+$ cepler check -e staging
+File k8s/environments/shared.yml changed
+Found new state to deploy - trigger commit ad57826
+```
+
+As we can see since we just deployed and recorded production there is nothing to do for that environment.
+But we haven't yet applied the upgraded version in the `shared.yml` file to staging which is why that check is telling us there is a new state.
+Also note that the 'trigger commit' accuratly identifies the last change that was relevent to the state of the environment:
+
+```
+% git show ad57826
+commit ad578268492be4c520cc108cd210cf526271b7c5
+Author: Justin Carter <justin@misthos.io>
+Date:   Thu Oct 15 10:44:50 2020 +0200
+
+    Bump app version
+
+diff --git a/k8s/environments/shared.yml b/k8s/environments/shared.yml
+index 23451f2..dfbaa85 100644
+--- a/k8s/environments/shared.yml
++++ b/k8s/environments/shared.yml
+@@ -1,2 +1,2 @@
+meta:
+-  image_tag: "1.18.0"
++  image_tag: "1.19.0"
+```
+
+## Conclusion
+
+In this demonstration we have seen how `cepler` can help you manage configuration files that define how a system should be deployed to multiple environments.
+
+There are 3 basic commands in cepler `check`, `prepare`, `record`.
+- `cepler check -e <environment>` - Check if an environment needs deploying
+- `cepler prepare -e <environment>` - Prepare the state of the files checked out in the current directory for deployment
+- `cepler record -e <environment>` -  Record (and commit) metadata about files currently checked out and relevant to the environment
+
+By using the cycle of:
+```
+$ cepler check -e <environment>
+$ cepler prepare -e <environment>
+$ <execute deploy command>
+$ cepler record -e <environment>
+```
+We can ensure an orderly propagation of changes accross environments.
+
+Here we have demonstrated this workflow using the cli commands on our local workstation.
+They are also particularly usefull when used within the context of a CI/CD system.
+Exploring cepler integration within a tool for workflow automation will be the subject of a future post.
+
+You can use the `help` command to explore additional functionality and options:
+```
+% cepler help
+cepler 0.4.5
+
+USAGE:
+    cepler [OPTIONS] <SUBCOMMAND>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --clone <CLONE_DIR>                    Clone the repository into <dir>
+    -c, --config <CONFIG_FILE>                 Cepler config file [env: CEPLER_CONF=]  [default: cepler.yml]
+        --git-branch <GIT_BRANCH>              Branch for --clone option [env: GIT_BRANCH=]  [default: main]
+        --git-private-key <GIT_PRIVATE_KEY>    Private key for --clone option [env: GIT_PRIVATE_KEY=]
+        --git-url <GIT_URL>                    Remote url for --clone option [env: GIT_URL=]
+
+SUBCOMMANDS:
+    check        Check wether the environment needs deploying. Exit codes: 0 - needs deploying; 1 - internal error;
+                 2 - nothing to deploy
+    concourse    Subcommand for concourse integration
+    help         Prints this message or the help of the given subcommand(s)
+    ls           List all files relevent to a given environment
+    prepare      Prepare workspace for hook execution
+    record       Record the state of an environment in the statefile
 ```
