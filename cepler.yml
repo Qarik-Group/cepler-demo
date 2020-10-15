@@ -6,7 +6,8 @@ environments:
     - k8s/environments/staging.yml
   production:
     latest:
-    - k8s/environments/staging.yml
+    - k8s/environments/production.yml
     passed: staging
     propagated:
     - k8s/*.yml
+    - k8s/environments/shared.yml

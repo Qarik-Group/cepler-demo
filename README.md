@@ -156,6 +156,7 @@ environments:
     passed: staging
     propagated:
     - k8s/*.yml
+    - k8s/environments/shared.yml
 ```
 
 As we can see the `cepler.yml` file specifies which files make up an environment and which of those should be vetted in a previous environment.
@@ -174,6 +175,11 @@ At this point `staging` is ready to deploy but `production` shouldn't be deploye
 
 ## Deploying an environment
 
+From here on the best way to follow along is on a branch other than `master` to not taint the state.
+```
+$ git checkout -b demo
+```
+
 To prepare for deploying an environment. We use the `prepare` command:
 ```
 $ cepler prepare -e staging
@@ -183,4 +189,60 @@ In this case the command will be a no-op because for staging all files that are 
 To be sure that no other files accidentally taint the configuration of the environment we are about to deploy we can add the `--force-clean` flag rendering only the files that pass the specified globs.
 ```
 $ cepler prepare -e staging --force-clean
+$ tree
+.
+├── cepler.yml
+└── k8s
+    ├── deployment.yml
+    └── environments
+        └── shared.yml
+        └── staging.yml
+```
+Now that we have just the files we want in our workspace we can simplify the deploy command:
+```
+$ spruce merge --prune meta k8s/**/*.yml | kubectl apply  -f -
+```
+Once the deploy is complete we want cepler to record the state the files for later reproduction or propagation. The `record` command will persist metadata about the state of the files involved in a deploy into a state file and commit it to the repository.
+```
+$ cepler record -e staging
+Recording current state
+Adding commit to repository to persist state
+$ cat .cepler/staging.state
+---
+current:
+  head_commit: 12d50cd01cf8631fb73a5ddcc52316ccae1b4988
+  files:
+    "{latest}/k8s/deployment.yml":
+      file_hash: d78a37bbd8971a40c49841fe958d6ddb59444c36
+      from_commit: f5b1ba0a92be43c038120c6fb2447df98c4df79a
+      message: Readme
+    "{latest}/k8s/environments/shared.yml":
+      file_hash: 23451f22e83b6e8da62c2198ac43142d08f1b8f6
+      from_commit: c485204c31b86d81b14ea829bdd2a5f56ac24dd8
+      message: Use image tag as shared input
+    "{latest}/k8s/environments/staging.yml":
+      file_hash: ab94f97964beadcb829d8a749da7cff05b82d874
+      from_commit: 8140c5d28607bcb33fb321acd565a4f542373e81
+      message: Initial commit%
+```
+For each file we have the file hash (can be verified via `git hash-object k8s/deployment.yml`) and the commit hash + message of the last commit that changed the file.
+
+## Propagating changes
+
+At this point we can re-check production and expect that it needs deploying.
+```
+$ cepler check -e production
+File k8s/environments/production.yml was added
+File k8s/deployment.yml was added
+File k8s/environments/shared.yml was added
+Found new state to deploy - trigger commit a12695c
+```
+
+But before deploying production lets assume that someone has checked in an later version of the system to be deployed.
+```
+$ cat <<EOF > k8s/environments/shared.yml
+meta:
+  image_tag: "1.19.0"
+EOF
+$ git add k8s/environment/shared.yml && git commit -m 'Bump app version'
 ```
