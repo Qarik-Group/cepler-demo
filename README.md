@@ -1,13 +1,13 @@
 # Cepler demo
 
-This repository serves as an introduction to the local usage of cepler.
+This repository serves as an introduction to the local usage of [cepler](https://github.com/bodymindarts/cepler).
 
 ## Introduction
 
 When operating software it is common to have more than 1 deployment of your system running.
 These deployments are typically segregated into multiple environments (such as dev / staging / production).
 One goal here is to de-risk making changes to the production system where end-users may be effected.
-By trying out software upgrades or config changes on a 'non-production' environment we can gain insights to what we expect to happen when we execute the same change on the production environment.
+By trying out software upgrades or config changes on a 'non-production' we can environment verify our expectations around the changes we are about to make .
 
 This approach is premised by the assumption that environments are identical to begin with (see [12factor.net/dev-prod-parity](https://12factor.net/dev-prod-parity) for more information).
 In practice this is almost never the case, at a minmum because the production environment will necesarrily have real-world load that the other environments won't.
@@ -36,20 +36,10 @@ minikube   Ready    master   23d   v1.19.0
 ```
 
 The config files we will use are under the [./k8s](./k8s) directory.
-To merge them together we will use [spruce](https://github.com/geofffranks/spruce/releases).
-```
-$ brew tap starkandwayne/cf
-$ brew install spruce
-```
-Cepler can be downloaded as a [pre-built binary](https://github.com/bodymindarts/cepler/releases):
-```
-$ wget https://github.com/bodymindarts/cepler/releases/download/v0.4.5/cepler-x86_64-apple-darwin-0.4.5.tar.gz
-$ tar -xvzf ./cepler-x86_64-apple-darwin-0.4.5.tar.gz
-x cepler-x86_64-apple-darwin-0.4.5/
-x cepler-x86_64-apple-darwin-0.4.5/cepler
-$ mv cepler-x86_64-apple-darwin-0.4.5/cepler <somewhere-on-your-PATH>
-```
 
+To merge them together we will use [spruce](https://github.com/geofffranks/spruce#how-do-i-get-started).
+
+Cepler can be downloaded as a [pre-built binary](https://github.com/bodymindarts/cepler/releases).
 Or if you have a rust toolchain installed via:
 ```
 $ cargo install cepler
@@ -69,7 +59,8 @@ Before introducing cepler lets have a look at what we are deploying.
 
 The following files make up the configuration of our system across all environments:
 ```
-% tree k8s
+$ git clone https://github.com/starkandwayne/cepler-demo && cd cepler-demo
+$ tree k8s
 k8s
 ├── deployment.yml
 └── environments
