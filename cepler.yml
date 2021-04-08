@@ -2,8 +2,8 @@ environments:
   staging:
     latest:
     - terraform/*.tf
-    - terraform/shared.yml
-    - terraform/staging.yml
+    - terraform/shared.tfvars
+    - terraform/staging.tfvars
   production:
     latest:
     - terraform/production.tfvars
