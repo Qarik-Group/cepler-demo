@@ -1,13 +1,13 @@
 environments:
   staging:
     latest:
-    - k8s/*.yml
-    - k8s/environments/shared.yml
-    - k8s/environments/staging.yml
+    - terraform/*.tf
+    - terraform/shared.yml
+    - terraform/staging.yml
   production:
     latest:
-    - k8s/environments/production.yml
+    - terraform/production.tfvars
     passed: staging
     propagated:
-    - k8s/*.yml
-    - k8s/environments/shared.yml
+    - terraform/*.tf
+    - terraform/shared.tfvars
