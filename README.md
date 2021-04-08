@@ -48,7 +48,7 @@ $ cargo install cepler
 Check that everything is installed via:
 ```
 $ cepler --version
-cepler 0.4.5
+cepler 0.4.9
 $ spruce --version
 spruce - Version 1.27.0
 ```
@@ -304,7 +304,7 @@ $ cepler check -e production
 Nothing new to deploy
 $ cepler check -e staging
 File k8s/environments/shared.yml changed
-Found new state to deploy - trigger commit ad57826
+Found new state to deploy - trigger commit 3b62d5c
 ```
 
 As we can see since we just deployed and recorded production there is nothing to do for that environment.
@@ -312,7 +312,7 @@ But we haven't yet applied the upgraded version in the `shared.yml` file to stag
 Also note that the 'trigger commit' accuratly identifies the last change that was relevent to the state of the environment:
 
 ```
-% git show ad57826
+% git show 3b62d5c
 commit ad578268492be4c520cc108cd210cf526271b7c5
 Author: Justin Carter <justin@misthos.io>
 Date:   Thu Oct 15 10:44:50 2020 +0200
@@ -354,7 +354,7 @@ Exploring cepler integration within a tool for workflow automation will be the s
 You can use the `help` command to explore additional functionality and options:
 ```
 % cepler help
-cepler 0.4.5
+cepler 0.4.9
 
 USAGE:
     cepler [OPTIONS] <SUBCOMMAND>
@@ -378,4 +378,5 @@ SUBCOMMANDS:
     ls           List all files relevent to a given environment
     prepare      Prepare workspace for hook execution
     record       Record the state of an environment in the statefile
+
 ```
