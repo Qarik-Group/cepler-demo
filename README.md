@@ -48,7 +48,7 @@ $ cargo install cepler
 Check that everything is installed via:
 ```
 $ cepler --version
-cepler 0.4.9
+cepler 0.5.0
 $ spruce --version
 spruce - Version 1.27.0
 ```
@@ -354,7 +354,7 @@ Exploring cepler integration within a tool for workflow automation will be the s
 You can use the `help` command to explore additional functionality and options:
 ```
 % cepler help
-cepler 0.4.9
+cepler 0.5.0
 
 USAGE:
     cepler [OPTIONS] <SUBCOMMAND>
@@ -378,5 +378,5 @@ SUBCOMMANDS:
     ls           List all files relevent to a given environment
     prepare      Prepare workspace for hook execution
     record       Record the state of an environment in the statefile
-
+    reproduce    Reproduce workspace according to last recorded state
 ```
